@@ -17,7 +17,7 @@ modeling methods for light fields.
 Our project consist of 2 steps:
 
 1. Divide input light fields into 3D patches and create network inputs with [DataRead_code](https://github.com/cvia-kn/lf_autoencoder_cvpr2018_code/tree/master/DataRead_code) project
-2. Train and evaluate the network with [lf_autoencoder_cvpr2018_code](https://github.com/cvia-kn/lf_autoencoder_cvpr2018_code/tree/master/lf_autoencoder_cvpr2018_code) project
+2. Train and evaluate the network with [intrinsic_autoencoder_eusipco2018_code](https://github.com/cvia-kn/lf_intrinsic_images/tree/master/intrinsic_autoencoder_eusipco2018_code) project
 
 ### Prerequisites
 1. Python 3.5
@@ -56,7 +56,9 @@ For example, if the input patch size is 96x96, and we select *loss_min_coord_3D=
 then the last 8 pixels will be omitted while computing loss.
 
 To use the trained model, please download the model [current_full.zip](http://data.lightfield-analysis.net/current_full.zip) and extract the archive to **./networks/** folder.
-We provide some test examples [intrinsic_test.zip](http://data.lightfield-analysis.net/diffuse_specular.zip) that should be extracted to the **./test_data/** folder.
+We provide some test examples [intrinsic_test.zip](http://data.lightfield-analysis.net/intrinsic_test.zip) that should be extracted to the **./test_data/** folder.
+
+To download our results on the test data in HDF5 format use this link:  [intrinsic_results.zip](http://data.lightfield-analysis.net/intrinsic_results.zip)
 
 To create your own test examples, please use [DataRead_code](https://github.com/cvia-kn/lf_autoencoder_cvpr2018_code/tree/master/DataRead_code) project.
 
