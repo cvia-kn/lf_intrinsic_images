@@ -1,0 +1,163 @@
+#!/usr/bin/python3
+#
+# read a bunch of source light fields and write out
+# training data for our autoencoder in useful chunks
+#
+# pre-preparation is necessary as the training data
+# will be fed to the trainer in random order, and keeping
+# several light fields in memory is impractical.
+#
+# WARNING: store data on an SSD drive, otherwise randomly
+# assembing a bunch of patches for training will
+# take ages.
+#
+# (c) Bastian Goldluecke, Uni Konstanz
+# bastian.goldluecke@uni.kn
+# License: Creative Commons CC BY-SA 4.0
+#
+
+from queue import Queue
+import time
+import code
+import os
+import sys
+import h5py
+
+import numpy as np
+
+
+# data config
+import config_data_format as cdf
+
+# python tools for our lf database
+import file_io
+# additional light field tools
+import lf_tools
+# data config
+
+
+
+# OUTPUT CONFIGURATION
+
+# patch size. patches of this size will be extracted and stored
+# must remain fixed, hard-coded in NN
+px = 48
+py = 48
+
+# number of views in H/V/ direction
+# input data must match this.
+nviews = 9
+
+# block step size. this is only 16, as we keep only the center 16x16 block
+# of each decoded patch (reason: reconstruction quality will probably strongly
+# degrade towards the boundaries).
+# 
+# TODO: test whether the block step can be decreased during decoding for speedup.
+#
+sx = 16
+sy = 16
+
+# output file to write to
+#
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# !!!!! careful: overwrite mode !!!!!
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
+# previous training data will be erased.
+
+training_data_dir      = '/data/cnns/training_data/'
+training_data_filename = 'lf_patch_autoencoder.hdf5'
+file = h5py.File( training_data_dir + training_data_filename, 'w' )
+
+
+
+# INPUT DATA
+#
+# configure source datasets, only the ones WITHOUT depth
+#
+data_folders_test  = ( ( "test", "bicycle" ),
+                       ( "test", "herbs" ),
+                       ( "test", "bedroom" ),
+                       ( "test", "origami" )
+                     )
+
+# TODO moar of these !
+data_folders_stanford = ( ( "stanford", "truck" ),
+                          ( "stanford", "amethyst" ) )
+
+data_folders_lytro = ( ( "lytro", "koala" ),
+                       ( "lytro", "owl_str" ) )
+
+
+
+#
+#data_folders = data_folders_test + data_folders_stanford + data_folders_lytro
+data_folders = data_folders_test + data_folders_stanford
+
+
+
+# EPI patches, nviews x patch size x patch size x channels
+# horizontal and vertical direction (to get crosshair)
+dset_v = file.create_dataset( 'stacks_v', ( 9, py,px, 3, 1 ),
+                              chunks = ( 9, py,px, 3, 1 ),
+                              maxshape = ( 9, py,px, 3, None ) )
+
+dset_h = file.create_dataset( 'stacks_h', ( 9, py,px, 3, 1 ),
+                              chunks = ( 9, py,px, 3, 1 ),
+                              maxshape = ( 9, py,px, 3, None ) )
+
+# dataset for correcponsing center view patch (to train joint upsampling)
+# ideally, would want to reconstruct full 4D LF patch, but probably too memory-intensive
+# keep for future work
+dset_cv = file.create_dataset( 'cv', ( 48,48, 3, 1 ),
+                               chunks = ( 48,48, 3, 1 ),
+                               maxshape = ( 48,48, 3, None ) )
+
+
+#
+# loop over all datasets, write out each dataset in patches
+# to feed to autoencoder in random order
+#
+index = 0
+for lf_name in data_folders:
+
+  data_folder = "/data/lfa/" + lf_name[0] + "/" + lf_name[1] + "/"
+  LF = file_io.read_lightfield( data_folder )
+  LF = LF.astype( np.float32 ) / 255.0
+
+  cv = lf_tools.cv( LF )
+  disp_gt = np.zeros( [cv.shape[0], cv.shape[1]], np.float32 )
+
+  # maybe we need those, probably not.
+  param_dict = file_io.read_parameters(data_folder)
+
+  # write out one individual light field
+  # block count
+  cx = np.int32( ( LF.shape[3] - px) / sx ) + 1
+  cy = np.int32( ( LF.shape[2] - py) / sy ) + 1
+
+  for by in np.arange( 0, cy ):
+    sys.stdout.write( '.' )
+    sys.stdout.flush()
+
+    for bx in np.arange( 0, cx ):
+
+      # extract data
+      patch = cdf.get_patch( LF, cv, disp_gt, by, bx )
+
+      # write to respective HDF5 datasets
+      dset_v.resize( index+1, 4 )
+      dset_v[ :,:,:,:, index ] = patch[ 'stack_v' ]
+
+      dset_h.resize( index+1, 4 )
+      dset_h[ :,:,:,:, index ] = patch[ 'stack_h' ]
+
+      dset_cv.resize( index+1, 3 )
+      dset_cv[ :,:,:, index ] = patch[ 'cv' ]
+
+      # next patch
+      index = index + 1
+
+  # next dataset
+  print(' done.')
+
