@@ -11,7 +11,7 @@ world examples captured with a Lytro Illum plenoptic camera.
 The proposed method outperforms state-of-the-art approaches
 for single images and achieves competitive accuracy with recent
 modeling methods for light fields.
-![teaser](https://user-images.githubusercontent.com/41570345/43076792-9e4eaf92-8e85-11e8-8763-9e3fd041ab23.png)
+![teaser_git](https://user-images.githubusercontent.com/41570345/58459365-836c4b00-812b-11e9-82f5-3341725a9229.png)
 
 ## Project description
 Our project consist of 2 steps:
